@@ -13,24 +13,27 @@
 <canvas id="myCanvas" width=480 height=320></canvas>
 
 <script>
+
+	//get references to the canvas and 2d drawing context
 	var canvas = document.getElementById("myCanvas");
 	var ctx = canvas.getContext("2d");
 	
-	var x = canvas.width/2;
-	var y = canvas.height-30;
-	var dx = 2;
-	var dy = -2;
-	
+	//ball parameters
+	var x = canvas.width/2;		//horizontal position
+	var y = canvas.height-30;	//vertical position
+	var dx = 2;					//horizontal velocity
+	var dy = -2;				//vertical velocity
 	var ballRadius = 10;
 	
+	//paddle parameters
 	var paddleHeight = 10;
 	var paddleWidth = 75;
 	var paddleX = (canvas.width-paddleWidth)/2;
-	
 	var paddleMoveSpeed = 7;
 	var leftPressed = false;
 	var rightPressed = false;
 	
+	//brick parameters
 	var brickRowCount = 3;
 	var brickColumnCount = 5;
 	var brickWidth = 75;
@@ -39,9 +42,11 @@
 	var brickOffsetTop = 30
 	var brickOffsetLeft = 30;
 	
+	//stat tracking
 	var score = 0;
 	var lives = 3;
 	
+	//create object placeholders for the bricks
 	var bricks = [];
 	for (var c=0; c<brickColumnCount; c++) {
 		bricks[c] = [];
@@ -50,8 +55,7 @@
 		}
 	}
 	
-	
-	
+	//draw ball in updated position
 	function drawBall() {
 		ctx.beginPath();
 		ctx.arc(x,y,ballRadius,0,Math.PI*2);
@@ -60,6 +64,7 @@
 		ctx.closePath();
 	}
 	
+	//draw paddle in updated position
 	function drawPaddle() {
 		ctx.beginPath();
 		ctx.rect(paddleX, canvas.height-paddleHeight, paddleWidth, paddleHeight);
@@ -68,10 +73,11 @@
 		ctx.closePath();
 	}
 	
+	//assign positions to placeholder bricks and draw them
 	function drawBricks() {
 		for (var c=0; c<brickColumnCount; c++) {
 			for (var r=0; r<brickRowCount; r++) {
-				if (bricks[c][r].status == 1) {
+				if (bricks[c][r].status == 1) {		//don't draw bricks that have been hit
 					var brickX = (c*(brickWidth+brickPadding))+brickOffsetLeft;
 					var brickY = (r*(brickHeight+brickPadding))+brickOffsetTop;
 					bricks[c][r].x = brickX;
@@ -86,29 +92,42 @@
 		}
 	}
 	
+	//looping function that is called every frame
 	function draw() {
-		ctx.clearRect(0,0,canvas.width,canvas.height);
+		ctx.clearRect(0,0,canvas.width,canvas.height);	//clear the canvas
+		//re-draw everything using updated positions/data from the end of the previous loop
 		drawBricks();
 		drawBall();
 		drawPaddle();
 		drawScore();
 		drawLives();
 		collisionDetection();
+		
+		//update positions based on velocity
 		x += dx;
 		y += dy;
+		
+		//check if ball direction should change based on position in canvas dimensions
+		//left & right walls
 		if (x + dx > canvas.width-ballRadius || x + dx < ballRadius) {
 			dx = -dx;
 		}
+		//top wall
 		if (y + dy < ballRadius) {
 			dy = -dy;
+		
+		//bottom wall, which leads to a loss unless a paddle is in the way
 		} else if (y + dy > canvas.height-ballRadius) {
+			//check if paddle's horizontal position intersects with the ball position
 			if (x > paddleX && x < paddleX+paddleWidth) {
 				dy = -dy;
+			//no paddle and bottom wall intersected
 			} else {
-				lives--;
-				if (!lives) {
-					alert("GAME OVER");
+				lives--;		//lose a life
+				if (!lives) {	//out of lives?
+					alert("GAME OVER");	//too bad
 					document.location.reload();
+				//reset starting position/velocity if there's more lives to go
 				} else {
 					x = canvas.width/2;
 					y = canvas.height-30;
@@ -119,19 +138,23 @@
 			}
 		}
 		
+		//logic to move the paddle right and left, bounded by canvas
 		if (rightPressed && paddleX < canvas.width-paddleWidth) {
 			paddleX += paddleMoveSpeed;
 		} else if (leftPressed && paddleX > 0) {
 			paddleX -= paddleMoveSpeed;
 		}
 		
+		//loop this function
 		requestAnimationFrame(draw);
 	}
 	
+	//input handler bindings
 	document.addEventListener("keydown", keyDownHandler, false);
 	document.addEventListener("keyup", keyUpHandler, false);
 	document.addEventListener("mousemove", mouseMoveHandler, false);
 	
+	//mouse handler
 	function mouseMoveHandler(e) {
 		var relativeX = e.clientX - canvas.offsetLeft;
 		if (relativeX > 0 && relativeX < canvas.width) {
@@ -139,6 +162,7 @@
 		}
 	}
 	
+	//keypress handler
 	function keyDownHandler(e) {
 		if (e.keyCode == 39) {
 			rightPressed = true;
@@ -147,6 +171,7 @@
 		}
 	}
 	
+	//key release handler
 	function keyUpHandler(e) {
 		if (e.keyCode == 39) {
 			rightPressed = false;
@@ -155,15 +180,17 @@
 		}
 	}
 	
+	//check for brick collision
 	function collisionDetection() {
 		for (var c=0; c<brickColumnCount; c++) {
 			for (var r=0; r<brickRowCount; r++) {
 				var b = bricks[c][r];
+				//collision only occurs if the brick is 'active'
 				if (b.status == 1) {
 					if (x > b.x && x < b.x+brickWidth && y > b.y && y < b.y+brickHeight) {
-						dy = -dy;
-						b.status = 0;
-						score++;
+						dy = -dy;		//bounce the ball back
+						b.status = 0;	//deactivate the brick
+						score++;		//get points
 						if (score == brickRowCount*brickColumnCount) {
 							alert("YOU ARE WINNER HA HA HA");
 							document.location.reload();
@@ -174,18 +201,21 @@
 		}
 	}
 	
+	//draw score in upper left of canvas
 	function drawScore() {
 		ctx.font = "16px Arial";
 		ctx.fillStyle = "#0095DD";
 		ctx.fillText("Score: "+score, 8, 20);
 	}
 	
+	//draw lives in upper right of canvas
 	function drawLives() {
 		ctx.font = "16px Arial";
 		ctx.fillStyle = "#0095DD";
 		ctx.fillText("Lives :"+lives, canvas.width-65, 20);
 	}
 	
+	//first call to draw(), which will re-call itself infinitely thereafter
 	draw();
 	
 </script>
